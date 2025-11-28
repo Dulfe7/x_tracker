@@ -13,8 +13,11 @@ from typing import Dict, List, Optional
 
 import requests
 from dotenv import load_dotenv
-from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
-from playwright.sync_api import sync_playwright
+from playwright.sync_api import (
+    Error as PlaywrightError,
+    TimeoutError as PlaywrightTimeoutError,
+    sync_playwright,
+)
 
 BASE_URL = "https://x.com"
 LAST_ID_PATH = Path(__file__).resolve().parent / "last_id.txt"
@@ -128,6 +131,16 @@ def extract_tweets(username: str, *, max_tweets: int = 10) -> List[Dict[str, str
             browser.close()
     except PlaywrightTimeoutError:
         print("Timed out waiting for the X profile page to load. Check the username or network.")
+        return []
+    except PlaywrightError as exc:
+        message = str(exc)
+        if "Executable doesn't exist" in message or "playwright install" in message.lower():
+            print(
+                "Playwright browser binaries are missing. "
+                "Run `python -m playwright install` and try again."
+            )
+        else:
+            print(f"Failed to fetch tweets: {message}")
         return []
     except Exception as exc:  # pragma: no cover - broad for robustness
         print(f"Failed to fetch tweets: {exc}")
